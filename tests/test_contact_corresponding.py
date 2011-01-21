@@ -62,8 +62,12 @@ class TestContactFilter(object):
 
 class TestMailMerge(object):
     def test_mail_merge(self):
-        pass
-
+        email_text = "Dear recent author in the $month $year issue of $journal.  Hello!  Sincerely, Us."
+        contact_tuple = ("Journal Of Testing", "1988", "JAN", "555@dev.null")
+        contact_dict = {"journal":contact_tuple[0], "year":contact_tuple[1], "month":contact_tuple[2], "email":contact_tuple[3]}
+        response = contact_corresponding.get_email_text(email_text, contact_dict)
+        assert_equals(response, 'Dear recent author in the JAN 1988 issue of Journal Of Testing.  Hello!  Sincerely, Us.')
+        
 class TestMailSend(object):
     def test_mail_send(self):
         pass

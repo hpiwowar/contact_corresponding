@@ -9,6 +9,7 @@ import sys
 import os
 import csv
 import glob
+from string import Template
 
 ISI_EMAIL_FIELD_NAME = "EM"
 ISI_JOURNAL_FIELD_NAME = "JI"
@@ -46,3 +47,9 @@ def get_all_journal_year_month_email(dir):
     for filename in glob.glob(os.path.join(dir, "*", "*.txt")):
         tuples += get_journal_year_month_email(filename)
     return(tuples)    
+    
+def get_email_text(text, contact_dict):
+    email_template = Template(text)
+    email_text = email_template.substitute(contact_dict)
+    return(email_text)
+    
