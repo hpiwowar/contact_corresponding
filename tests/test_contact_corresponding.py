@@ -70,4 +70,6 @@ class TestMailMerge(object):
         
 class TestMailSend(object):
     def test_mail_send(self):
-        pass
+        email_html_body = '<b>Hi!</b><p><em>Good to see <a href="somewhere">you</a>.  <p>Bye!'
+        response = contact_corresponding.send_email(email_html_body, "The Subject", "hpiwowar+to@gmail.com", "hpiwowar@email.unc.edu")
+        assert_equals(response, "success")
