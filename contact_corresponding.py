@@ -16,36 +16,67 @@ ISI_JOURNAL_FIELD_NAME = "JI"
 ISI_YEAR_FIELD_NAME = "PY"
 ISI_MONTH_FIELD_NAME = "PD"
 
+SCOPUS_EMAIL_FIELD_NAME = "Correspondence Address"
+SCOPUS_JOURNAL_FIELD_NAME = "Source title"
+SCOPUS_YEAR_FIELD_NAME = "Year"
+SCOPUS_MONTH_FIELD_NAME = "Volume"
 
 
-def get_journal(row):
+def get_scopus_journal(row):
+	journal = row[SCOPUS_JOURNAL_FIELD_NAME]
+	return(journal)
+
+def get_scopus_year(row):
+	year = row[SCOPUS_YEAR_FIELD_NAME]
+	return(year)
+
+def get_scopus_month(row):
+    month = ""
+    return(month)
+
+def get_scopus_emails(row):
+	emails = [row[SCOPUS_EMAIL_FIELD_NAME].split(" ")[-1]]
+	return(emails)
+
+def get_scopus_journal_year_month_email(filename):
+	reader = csv.DictReader(open(filename, "r"), delimiter=",")
+	tuples = [(get_scopus_journal(row), get_scopus_year(row), get_scopus_month(row), get_scopus_emails(row)) for row in reader]
+	return(tuples)
+
+def get_scopus_all_journal_year_month_email(dir):
+    tuples = []
+    for filename in glob.glob(os.path.join(dir, "*", "*.csv")):
+        tuples += get_scopus_journal_year_month_email(filename)
+    return(tuples)    
+
+def get_isi_journal(row):
 	journal = row[ISI_JOURNAL_FIELD_NAME]
 	return(journal)
 
-def get_year(row):
+def get_isi_year(row):
 	year = row[ISI_YEAR_FIELD_NAME]
 	return(year)
 
-def get_month(row):
+def get_isi_month(row):
     try:
         month = row[ISI_MONTH_FIELD_NAME][0:3]
     except IndexError:
         month = ""
     return(month)
 
-def get_emails(row):
+def get_isi_emails(row):
 	emails = row[ISI_EMAIL_FIELD_NAME].split("; ")
 	return(emails)
 
-def get_journal_year_month_email(filename):
+def get_isi_journal_year_month_email(filename):
 	reader = csv.DictReader(open(filename, "r"), delimiter="\t", quoting=csv.QUOTE_NONE)
-	tuples = [(get_journal(row), get_year(row), get_month(row), get_emails(row)) for row in reader]
+	tuples = [(get_isi_journal(row), get_isi_year(row), get_isi_month(row), get_isi_emails(row)) for row in reader]
 	return(tuples)
 
-def get_all_journal_year_month_email(dir):
+def get_isi_all_journal_year_month_email(dir):
     tuples = []
     for filename in glob.glob(os.path.join(dir, "*", "*.txt")):
-        tuples += get_journal_year_month_email(filename)
+        tuples += get_isi_journal_year_month_email(filename)
     return(tuples)    
     
 def get_email_text(text, contact_dict):
