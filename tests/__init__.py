@@ -1,3 +1,10 @@
+import sys
+import os
+
+def password(f):
+    f.password = True
+    return f
+
 def slow(f):
     f.slow = True
     return f
@@ -13,6 +20,11 @@ def notimplemented(f):
 def acceptance(f):
     f.acceptance = True
     return f
+
+def get_this_dir():
+    module = sys.modules[__name__]
+    this_dir = os.path.dirname(os.path.abspath(module.__file__))
+    return(this_dir)
 
 def set_testing_pythonpath():
     # from http://igotgenes.blogspot.com/2008_12_01_archive.html
