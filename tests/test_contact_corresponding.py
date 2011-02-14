@@ -31,6 +31,7 @@ test_scopus_data_file2 = os.path.join(get_this_dir(), "testdata", "scopus_2010",
 test_scopus_data_file3 = os.path.join(get_this_dir(), "testdata", "scopus_2010", "0006-3207.csv")
 
 test_sent_file = os.path.join(get_this_dir(), "testdata", "sent.txt")
+test_exclude_file = os.path.join(get_this_dir(), "testdata", "exclude.csv")
 
 def get_wc_number_lines(filename):
     wc_response = os.popen("wc " + '"' + filename + '"').read()
@@ -47,7 +48,7 @@ class TestISIScraping(object):
     def test_get_isi_fields(self):
         response = contact_corresponding.get_isi_fields(test_isi_data_file)
         assert_equals(len(response), get_wc_number_lines(test_isi_data_file) - 1)
-        assert_equals(response[1:5], [{'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['ohtsuki.h.aa@m.titech.ac.jp'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}, {'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['Goran.Arnqvist@ebc.uu.se'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}, {'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['montooth@indiana.edu', 'cmeiklej@mail.rochester.edu', 'david_rand@brown.edu'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}, {'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['ron.eytan@gmail.com'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}])
+        assert_equals(response[1:5], [{'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['ohtsuki.h.aa@m.titech.ac.jp'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}, {'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['goran.arnqvist@ebc.uu.se'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}, {'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['montooth@indiana.edu', 'cmeiklej@mail.rochester.edu', 'david_rand@brown.edu'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}, {'journal': 'Evolution', 'volume_issue': '64_12', 'emails': ['ron.eytan@gmail.com'], 'pretty_month': 'DEC', 'year': '2010', 'type': 'Article', 'data_month': 'DEC'}])
         
         response = contact_corresponding.get_isi_fields(test_isi_data_file2)
         assert_equals(len(response), get_wc_number_lines(test_isi_data_file2) - 1)
@@ -152,6 +153,12 @@ class TestContactFilter(object):
         assert_equals(len(not_unsubscribe), 4)
         assert_equals(unsubscribe, [{'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'hpiwowar@gmail.com', 'year': '2010', 'type': 'Editorial Material', 'emails': ['hpiwowar@gmail.com']}])
 
+    def test_filter_exclude_list(self):
+        test_data = [{'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'thorstenhorn@gmx.net', 'year': '2010', 'type': 'Review', 'emails': ['thorstenhorn@gmx.net']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'hpiwowar@gmail.com', 'year': '2010', 'type': 'Editorial Material', 'emails': ['hpiwowar@gmail.com']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'Deborah.Charlesworth@ed.ac.uk', 'year': '2010', 'type': 'Editorial Material', 'emails': ['Deborah.Charlesworth@ed.ac.uk']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'fgoyache@serida.org', 'year': '2010', 'type': 'Article', 'emails': ['fgoyache@serida.org']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'lrutledge@sdfsdfs.ca', 'year': '2010', 'type': 'Article', 'emails': ['lrutledge@nrdpfc.ca', 'lrutledge@sdfsdfs.ca']}]
+        (not_exclude, exclude) = contact_corresponding.filter_exclude_list(test_data, test_exclude_file)
+        assert_equals(len(not_exclude), 4)
+        assert_equals(exclude, [{'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'hpiwowar@gmail.com', 'year': '2010', 'type': 'Editorial Material', 'emails': ['hpiwowar@gmail.com']}])
+
     @password
     def test_get_emails_for_sending(self):
         all = contact_corresponding.get_isi_fields(test_isi_fake_data_file)
@@ -173,14 +180,17 @@ class TestContactFilter(object):
         (first_occurrence3, dupes3) = contact_corresponding.filter_unsubscribe_list(first_occurrence2)
         assert_equals(len(first_occurrence3), 8)
         assert_equals(len(dupes3), 1)
+        (first_occurrence4, dupes4) = contact_corresponding.filter_exclude_list(first_occurrence3, test_exclude_file)
+        assert_equals(len(first_occurrence4), 6)
+        assert_equals(len(dupes4), 2)
 
     @password
     def test_do_all_filtering(self):
         months = ["OCT", "NOV", "FAL"]
         years = ["2010"]
-        (first_occurrence3, dupes3) = contact_corresponding.do_all_filtering(test_isi_fake_data_file, test_sent_file, months, years)
-        assert_equals(len(first_occurrence3), 8)
-        assert_equals(len(dupes3), 1)
+        (keepers, all_dupes) = contact_corresponding.do_all_filtering(test_isi_fake_data_path, test_sent_file, test_exclude_file, months, years)
+        assert_equals(len(keepers), 6)
+        assert_equals(len(all_dupes), 8)
         
 
 class TestMailMerge(object):
@@ -202,5 +212,5 @@ class TestMailCheck(object):
     @password
     def test_mail_check(self):
         response = contact_corresponding.get_unsubscribe_emails()
-        assert_equals(response, ['Heather Piwowar <hpiwowar@gmail.com>'])
+        assert_equals(response[1], 'hpiwowar@gmail.com')
         

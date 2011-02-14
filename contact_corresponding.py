@@ -107,19 +107,21 @@ def get_isi_emails(row):
 
 def get_isi_fields(filename):
 	reader = csv.DictReader(open(filename, "rU"), delimiter="\t", quoting=csv.QUOTE_NONE)
-	tuples = [(get_isi_journal(row), get_isi_year(row), get_isi_data_month(row), get_isi_pretty_month(row), get_isi_emails(row), get_isi_volume_issue(row), get_isi_article_type(row)) for row in reader]
+	rows = [row for row in reader]
+	tuples = [(get_isi_journal(row), get_isi_year(row), get_isi_data_month(row), get_isi_pretty_month(row), get_isi_emails(row), get_isi_volume_issue(row), get_isi_article_type(row)) for row in rows]
 	mykeys = ["journal", "year", "data_month", "pretty_month", "emails", "volume_issue", "type"]
 	mydict = [dict(zip(mykeys, myvalues)) for myvalues in tuples]
 	return(mydict)
 
-def get_isi_all_fields(dir):
+def get_isi_all_fields(mydir):
     tuples = []
-    for filename in glob.glob(os.path.join(dir, "*.txt")):
+    for filename in glob.glob(os.path.join(mydir, "*.txt")):
         tuples += get_isi_fields(filename)
     return(tuples)    
     
 def get_email_text(text, contact_dict):
     email_template = Template(text)
+    print(contact_dict)
     email_text = email_template.substitute(contact_dict)
     return(email_text)
 
@@ -255,9 +257,6 @@ def get_already_sent_emails(already_sent_filename):
     emails = [email for (email, date, note) in already_sent_tuples]
     return(emails)
     
-def email_seen_already(row, already_seen_list):
-    return(True)
-
 def get_one_row_per_email(rows):
     individual_rows = []
     for row in rows:
@@ -306,15 +305,34 @@ def filter_unsubscribe_list(data):
         else:
             not_unsubscribe.append(row)
     return(not_unsubscribe, unsubscribe)
+
+def get_exclude_emails(exclude_filename):
+    exclude_rows = open(exclude_filename, "r").readlines()
+    exclude_tuples = [row.split(",") for row in exclude_rows]
+    emails = [row[-2] for row in exclude_tuples]
+    return(emails)
+
+def filter_exclude_list(data, exclude_filename):
+    first_occurrence = []
+    dups = []
+    already_sent_emails = get_exclude_emails(exclude_filename)
+    for row in data:
+        if row["single_email"] in already_sent_emails:
+            dups.append(row)
+        else:
+            first_occurrence.append(row)
+    return(first_occurrence, dups)
+
     
 def list_of_emails(rows):
     return([row["single_email"] for row in rows]) 
        
-def do_all_filtering(data_file, sent_file, months, years):
+def do_all_filtering(data_file, sent_filename, exclude_filename, months, years):
     log.info("FILTERING with months=" + " ".join(months) + " and years=" + " ".join(years))
-    all = get_isi_all_fields(data_file)
-    log.info("STARTING with n=" + str(len(all)))
-    unique = get_unique_items(all)
+    log.info("for data file " + data_file)
+    all_records = get_isi_all_fields(data_file)
+    log.info("STARTING with n=" + str(len(all_records)))
+    unique = get_unique_items(all_records)
     articles = get_filtered_dict(unique, lambda k, v: k == "type" and v == "Article")
     articles_of_months = get_filtered_dict(articles, lambda k, v: k == "data_month" and v in months)
     articles_of_years = get_filtered_dict(articles_of_months, lambda k, v: k == "year" and v in years)
@@ -323,13 +341,17 @@ def do_all_filtering(data_file, sent_file, months, years):
     (first_occurrence, dupes) = email_first_occurrence(one_row_per_email, True)
     log.info("ELIMINATED because not first occurance, n=" + str(len(dupes)))
     log.info(list_of_emails(dupes))
-    (first_occurrence2, dupes2) = email_not_in_already_sent(first_occurrence, sent_file)
+    (first_occurrence2, dupes2) = email_not_in_already_sent(first_occurrence, sent_filename)
     log.info("ELIMINATED because already sent, n=" + str(len(dupes2)))
     log.info(list_of_emails(dupes2))
     (first_occurrence3, dupes3) = filter_unsubscribe_list(first_occurrence2)
     log.info("ELIMINATED because unsubscribe, n=" + str(len(dupes3)))
     log.info(list_of_emails(dupes3))
-    log.info("KEEPING these, n=" + str(len(first_occurrence3)))
-    log.debug(list_of_emails(first_occurrence3))
-    all_dupes = dupes + dupes2 + dupes3
-    return(first_occurrence3, all_dupes)
+    (first_occurrence4, dupes4) = filter_exclude_list(first_occurrence3, exclude_filename)
+    log.info("ELIMINATED because on exclude list, n=" + str(len(dupes4)))
+    log.info(list_of_emails(dupes4))
+    all_dupes = dupes + dupes2 + dupes3 + dupes4
+    keepers = first_occurrence4
+    log.info("KEEPING these, n=" + str(len(keepers)))
+    log.debug(list_of_emails(keepers))
+    return(keepers, all_dupes)
