@@ -217,8 +217,8 @@ def send_to_contact_list(fake_or_real, contact_list, subject, email_template, q,
             log.debug("BCC list:")
             log.debug(bcc_list)
             if fake_or_real == "REAL":
-                send_it_already(subject, email_body, bcc_list)
-                log.info("******* SENT FOR REAL ***********")
+                #send_it_already(subject, email_body, bcc_list)
+                #log.info("******* SENT FOR REAL ***********")
                 pass
             else:
                 send_it_already(subject, email_body, ["researchremix@gmail.com", "hpiwowar@nescent.org"])
