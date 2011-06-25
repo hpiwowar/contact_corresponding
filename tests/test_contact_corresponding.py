@@ -13,7 +13,8 @@ import nose
 from nose.tools import assert_equals
 from tests import password, slow, online, notimplemented, acceptance, get_this_dir
 
-import contact_corresponding
+from contact_corresponding import contact_corresponding
+
 
 if __name__ == '__main__':
     nose.runmodule()
@@ -113,11 +114,22 @@ class TestContactFilter(object):
         result_months = [d["data_month"] for d in result]
         assert_equals(set(result_months), set(['NOV']))
 
+        result = contact_corresponding.get_filtered_dict(all, lambda k, v: k == "data_month" and v in ["NOV", "DEC", "FAL"])
+        assert_equals(len(result), 35)
+        result_months = [d["data_month"] for d in result]
+        assert_equals(set(result_months), set(['NOV', 'DEC']))
+
     def test_get_one_row_per_email(self):
         all = contact_corresponding.get_isi_fields(test_isi_fake_data_file)
         assert_equals(len(all), 35)
         response = contact_corresponding.get_one_row_per_email(all)
         assert_equals(len(response), 38)
+
+    def test_email_already_sent_for_reminder(self):
+        gold_has_one_row_per_email = [{'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'thorstenhorn@gmx.net', 'year': '2010', 'type': 'Review', 'emails': ['thorstenhorn@gmx.net']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'lrutledge@nrdpfc.ca', 'year': '2010', 'type': 'Editorial Material', 'emails': ['lrutledge@nrdpfc.ca']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'Deborah.Charlesworth@ed.ac.uk', 'year': '2010', 'type': 'Editorial Material', 'emails': ['Deborah.Charlesworth@ed.ac.uk']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'fgoyache@serida.org', 'year': '2010', 'type': 'Article', 'emails': ['fgoyache@serida.org']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'lrutledge@sdfsdfs.ca', 'year': '2010', 'type': 'Article', 'emails': ['lrutledge@nrdpfc.ca', 'lrutledge@sdfsdfs.ca']}]
+        assert_equals(len(gold_has_one_row_per_email), 5)
+        (first_occurrence, dupes) = contact_corresponding.email_already_sent_for_reminder(gold_has_one_row_per_email, test_sent_file, "TEST")
+        assert_equals(len(first_occurrence), 1)
 
     def test_email_not_in_already_sent(self):
         gold_has_one_row_per_email = [{'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'thorstenhorn@gmx.net', 'year': '2010', 'type': 'Review', 'emails': ['thorstenhorn@gmx.net']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'lrutledge@nrdpfc.ca', 'year': '2010', 'type': 'Editorial Material', 'emails': ['lrutledge@nrdpfc.ca']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'Deborah.Charlesworth@ed.ac.uk', 'year': '2010', 'type': 'Editorial Material', 'emails': ['Deborah.Charlesworth@ed.ac.uk']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'fgoyache@serida.org', 'year': '2010', 'type': 'Article', 'emails': ['fgoyache@serida.org']}, {'journal': 'Heredity', 'volume_issue': '105_6', 'month': 'DEC', 'single_email': 'lrutledge@sdfsdfs.ca', 'year': '2010', 'type': 'Article', 'emails': ['lrutledge@nrdpfc.ca', 'lrutledge@sdfsdfs.ca']}]

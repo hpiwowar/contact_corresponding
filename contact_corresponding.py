@@ -15,6 +15,7 @@ import random
 import html2text
 from mylog import log
 
+  
 ISI_EMAIL_FIELD_NAME = "EM"
 ISI_JOURNAL_FIELD_NAME = "JI"
 ISI_YEAR_FIELD_NAME = "PY"
@@ -22,6 +23,10 @@ ISI_MONTH_FIELD_NAME = "PD"
 ISI_VOLUME_FIELD_NAME = "VL"
 ISI_ISSUE_FIELD_NAME = "IS"
 ISI_ARTICLE_TYPE_FIELD_NAME = "DT"
+ISI_DOI_FIELD_NAME = "DI"
+ISI_AUTHORS_FIELD_NAME = "AU"
+ISI_PAGE_FIELD_NAME = "PN"
+ISI_TITLE_FIELD_NAME = "TI"
 
 SCOPUS_EMAIL_FIELD_NAME = "Correspondence Address"
 SCOPUS_JOURNAL_FIELD_NAME = "Source title"
@@ -61,17 +66,9 @@ def get_scopus_all_fields(dir):
         tuples += get_scopus_fields(filename)
     return(tuples)    
 
-def get_isi_article_type(row):
-	article_type = row[ISI_ARTICLE_TYPE_FIELD_NAME]
+def get_isi_general(row, field):
+	article_type = row[field]
 	return(article_type)
-
-def get_isi_journal(row):
-	journal = row[ISI_JOURNAL_FIELD_NAME]
-	return(journal)
-
-def get_isi_year(row):
-	year = row[ISI_YEAR_FIELD_NAME]
-	return(year)
 
 def get_isi_volume_issue(row):
     volume = row[ISI_VOLUME_FIELD_NAME]
@@ -85,7 +82,7 @@ def get_isi_data_month(row):
     except IndexError:
         month = ""
     if (len(month) < 1):
-        month = get_isi_journal(row) + "-" + get_isi_volume_issue(row)       
+        month = row[ISI_JOURNAL_FIELD_NAME] + "-" + get_isi_volume_issue(row)       
     return(month)
 
 def get_isi_pretty_month(row):
@@ -108,8 +105,10 @@ def get_isi_emails(row):
 def get_isi_fields(filename):
 	reader = csv.DictReader(open(filename, "rU"), delimiter="\t", quoting=csv.QUOTE_NONE)
 	rows = [row for row in reader]
-	tuples = [(get_isi_journal(row), get_isi_year(row), get_isi_data_month(row), get_isi_pretty_month(row), get_isi_emails(row), get_isi_volume_issue(row), get_isi_article_type(row)) for row in rows]
-	mykeys = ["journal", "year", "data_month", "pretty_month", "emails", "volume_issue", "type"]
+	tuples = [(get_isi_general(row, ISI_JOURNAL_FIELD_NAME), get_isi_general(row, ISI_YEAR_FIELD_NAME), get_isi_data_month(row), get_isi_pretty_month(row), 
+	    get_isi_emails(row), get_isi_volume_issue(row), get_isi_general(row, ISI_ARTICLE_TYPE_FIELD_NAME),
+	    get_isi_general(row, ISI_DOI_FIELD_NAME), get_isi_general(row, ISI_PAGE_FIELD_NAME), get_isi_general(row, ISI_TITLE_FIELD_NAME), get_isi_general(row, ISI_AUTHORS_FIELD_NAME)) for row in rows]
+	mykeys = ["journal", "year", "data_month", "pretty_month", "emails", "volume_issue", "type", "doi", "page", "title", "authors"]
 	mydict = [dict(zip(mykeys, myvalues)) for myvalues in tuples]
 	return(mydict)
 
@@ -179,9 +178,9 @@ def send_email(html_body, subject, to_addresses, cc_addresses, bcc_addresses, fr
     # and message to send - here it is sent as one string.
     try:
         mailServer.sendmail(from_address, to_addresses + cc_addresses + bcc_addresses, msg.as_string())
-        log.info("wrote an email:  \nFROM {0}, \nTO {1}, \nCC {2}, \nBCC {3} \n{4}".format(from_address, ",".join(to_addresses),",".join(cc_addresses), ",".join(bcc_addresses), msg.as_string()))
+        log.info("wrote an email:  \nFROM {0}, \nTO {1}, \nCC {2}, \nBCC {3} \n{4}".format(from_address, ",".join(to_addresses),",".join(cc_addresses), ",".join(bcc_addresses), msg.as_string()[0:200]))
     except:
-        log.info("EMAIL NOT SENT OR RECEIVED PROPERLY:  \nFROM {0}, \nTO {1}, \nCC {2}, \nBCC {3} \n{4}".format(from_address, ",".join(to_addresses), ",".join(cc_addresses), ",".join(bcc_addresses), msg.as_string()))
+        log.info("EMAIL NOT SENT OR RECEIVED PROPERLY:  \nFROM {0}, \nTO {1}, \nCC {2}, \nBCC {3} \n{4}".format(from_address, ",".join(to_addresses), ",".join(cc_addresses), ",".join(bcc_addresses), msg.as_string()[0:200]))
         
     mailServer.quit()  
     return("success")
@@ -228,16 +227,17 @@ def get_emails(email_ids, mailbox):
         email_address = email.utils.parseaddr(from_line) 
         data.append(email_address[1])
     return data
-    
-# This works even when tuples contain lists.  Not fast but clear.  f2 from http://www.peterbe.com/plog/uniqifiers-benchmark    
-def get_unique_items(seq):  
+     
+# from http://www.peterbe.com/plog/uniqifiers-benchmark    
+# and view-source:http://www.peterbe.com/plog/uniqifiers-benchmark/uniqifiers_benchmark.py
+def get_unique_items(seq):
     # order preserving
     checked = []
     for e in seq:
         if e not in checked:
             checked.append(e)
     return checked
-    
+            
 # from http://stackoverflow.com/questions/1214968/filtering-dictionaries-and-creating-sub-dictionaries-based-on-keys-values-in-pyth
 #test_data = [{"key1":"value1", "key2":"value2"}, {"key1":"blabla"}, {"key1":"value1", "eh":"uh"}]
 #list(filter_data(test_data, lambda k, v: k == "key1" and v == "value1"))    
@@ -251,19 +251,21 @@ def get_filtered_dict(data, predicate=lambda k, v: True):
     result = filter_dict(data, predicate)
     return(list(result))
 
-def get_already_sent_emails(already_sent_filename):
+def get_already_sent_emails(already_sent_filename, reminder_string=None):
     already_sent_rows = open(already_sent_filename, "r").readlines()
     already_sent_tuples = [row.split("\t") for row in already_sent_rows]
-    emails = [email for (email, date, note) in already_sent_tuples]
+    if reminder_string:
+        emails = [email for (email, date, note) in already_sent_tuples if note.strip()==reminder_string]
+    else:
+        emails = [email for (email, date, note) in already_sent_tuples]
     return(emails)
     
 def get_one_row_per_email(rows):
     individual_rows = []
     for row in rows:
-        for email in row["emails"]:
-            new_row = row
-            new_row["single_email"] = email
-            individual_rows.append(new_row)
+        new_row = row.copy()
+        new_row["single_email"] = random.choice(row["emails"])
+        individual_rows += [new_row]
     return(individual_rows)
 
 def email_not_in_already_sent(data, already_sent_filename):
@@ -277,6 +279,17 @@ def email_not_in_already_sent(data, already_sent_filename):
             first_occurrence.append(row)
     return(first_occurrence, dups)
 
+def email_already_sent_for_reminder(data, already_sent_filename, reminder_string):
+    has_been_sent_first_email = []
+    hasnt_been_sent = []
+    already_sent_emails = get_already_sent_emails(already_sent_filename, reminder_string)
+    for row in data:
+        if row["single_email"] in already_sent_emails:
+            has_been_sent_first_email.append(row)
+        else:
+            hasnt_been_sent.append(row)
+    return(has_been_sent_first_email, hasnt_been_sent)
+    
 def email_first_occurrence(data, randomize=True):
     if randomize:
         random.shuffle(data)
@@ -326,7 +339,44 @@ def filter_exclude_list(data, exclude_filename):
     
 def list_of_emails(rows):
     return([row["single_email"] for row in rows]) 
-       
+      
+def do_reminder_filtering_part1(data_file, sent_filename, exclude_filename, months, years, reminder_string): 
+    log.info("FILTERING with months=" + " ".join(months) + " and years=" + " ".join(years))
+    log.info("for data file " + data_file)
+    all_records = get_isi_all_fields(data_file)
+    log.info("STARTING with n=" + str(len(all_records)))
+    unique = get_unique_items(all_records)
+    articles = get_filtered_dict(unique, lambda k, v: k == "type" and v == "Article")
+    articles_of_months = get_filtered_dict(articles, lambda k, v: k == "data_month" and v in months)
+    articles_of_years = get_filtered_dict(articles_of_months, lambda k, v: k == "year" and v in years)
+    one_row_per_email = get_one_row_per_email(articles_of_years)
+    log.info("AFTER FILTERING for months and years, n=" + str(len(one_row_per_email)))
+    (first_occurrence, dupes) = email_first_occurrence(one_row_per_email, True)
+    log.info("ELIMINATED because not first occurance, n=" + str(len(dupes)))
+    log.info(list_of_emails(dupes))
+    
+    (first_occurrence2, dupes2) = email_already_sent_for_reminder(first_occurrence, sent_filename, reminder_string)
+    log.info("ELIMINATED because REMINDER and NOT ALREADY sent, n=" + str(len(dupes2)))
+    log.info(list_of_emails(dupes2))
+    
+    return(first_occurrence, first_occurrence2, dupes, dupes2)
+           
+def do_reminder_filtering(data_file, sent_filename, exclude_filename, months, years, reminder_string):
+    (first_occurrence, first_occurrence2, dupes, dupes2) = do_reminder_filtering_part1(data_file, sent_filename, exclude_filename, months, years, reminder_string)
+    
+    (first_occurrence3, dupes3) = filter_unsubscribe_list(first_occurrence2)
+    log.info("ELIMINATED because unsubscribe, n=" + str(len(dupes3)))
+    log.info(list_of_emails(dupes3))
+    (first_occurrence4, dupes4) = filter_exclude_list(first_occurrence3, exclude_filename)
+    log.info("ELIMINATED because on exclude list, n=" + str(len(dupes4)))
+    log.info(list_of_emails(dupes4))
+    all_dupes = dupes + dupes2 + dupes3 + dupes4
+    keepers = first_occurrence4
+    log.info("KEEPING these, n=" + str(len(keepers)))
+    log.debug(list_of_emails(keepers))
+    return(keepers, all_dupes)
+        
+           
 def do_all_filtering(data_file, sent_filename, exclude_filename, months, years):
     log.info("FILTERING with months=" + " ".join(months) + " and years=" + " ".join(years))
     log.info("for data file " + data_file)
@@ -355,3 +405,7 @@ def do_all_filtering(data_file, sent_filename, exclude_filename, months, years):
     log.info("KEEPING these, n=" + str(len(keepers)))
     log.debug(list_of_emails(keepers))
     return(keepers, all_dupes)
+
+   
+    
+        
