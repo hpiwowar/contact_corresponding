@@ -12,6 +12,7 @@ from nose.tools import assert_equals
 import csv
 import urllib
 import time
+import random
 try:
     import contact_corresponding
     from contact_corresponding import contact_corresponding
@@ -282,12 +283,9 @@ def test_dry_run():
     #send_to_email_groups("FAKE", ["JAN"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
     #send_to_reminder_groups("FAKE", ["JAN"], ["2011"], "Group:2011:JAN", sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
 
+    #(contact_list, not_included) = contact_corresponding.do_all_filtering(isi_data_path, sent_filename, exclude_filename, ["FEB"], ["2011"])
 
     send_to_email_groups("FAKE", ["FEB"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
-
-    (contact_list, not_included) = contact_corresponding.do_all_filtering(isi_data_path, sent_filename, exclude_filename, ["FEB"], ["2011"])
-    (contact_list, not_included) = contact_corresponding.do_all_filtering(isi_data_path, sent_filename, exclude_filename, ["JAN"], ["2011"])
-    (contact_list, not_included) = contact_corresponding.do_all_filtering(isi_data_path, sent_filename, exclude_filename, ["OCT", "NOV", "DEC"], ["2010"])
 
     pass
 
