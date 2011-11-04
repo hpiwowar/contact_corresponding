@@ -32,7 +32,8 @@ def get_this_dir():
     this_dir = os.path.dirname(os.path.abspath(module.__file__))
     return(this_dir)
 
-isi_data_path = os.path.join(get_this_dir(), "data", "isi", "*")
+isi_data_path = os.path.join(get_this_dir(), "data", "isi", "ISI_2011-10")
+#isi_data_path = os.path.join(get_this_dir(), "data", "isi", "*")
 scopus_data_path = os.path.join(get_this_dir(), "data", "scopus", "*")
 
 isi_output_filename = os.path.join(get_this_dir(), "isi_output.csv")
@@ -52,17 +53,14 @@ def slow(f):
 def runme(f):
     f.runme = True
     return f
-    
-if __name__ == '__main__':
-    nose.runmodule()
-    
+        
 class TestEmail(object):
     @slow
     def test_send_email(self):
         email_html_body_template = open(email_template_initial, "r").read()
         contact_dict = {"journal":"MY JOURNAL", "url":"http://thisurl.org"}
         email_body = contact_corresponding.get_email_text(email_html_body_template, contact_dict)
-        response = contact_corresponding.send_email(email_body, "Invitation to Data Sharing Policy research study", ["hpiwowar@email.unc.edu"], [], ["hpiwowar+bcc1@gmail.com", "hpiwowar+bcc2@gmail.com"], "Heather Piwowar <hpiwowar@email.unc.edu>")
+        response = contact_corresponding.send_email(email_body, "Invitation to Data Sharing Policy research study", ["hpiwowar@live.unc.edu"], [], ["hpiwowar+bcc1@gmail.com", "hpiwowar+bcc2@gmail.com"], "Heather Piwowar <hpiwowar@live.unc.edu>")
         assert_equals(response, "success")
 
 class TestParse(object):
@@ -126,7 +124,7 @@ class TestFilter(object):
         #len(contact_list)
         #assert_equals(len(contact_list), 587)
 
-        (contact_list, not_included) = contact_corresponding.do_reminder_filtering(isi_data_path, sent_filename, exclude_filename, months=["NOV"], years=["2010"], reminder_string="Group:2010:NOV")
+        (contact_list, not_included) = contact_corresponding.do_reminder_filtering(sent_filename, exclude_filename, months=["NOV"], years=["2010"], reminder_string="Group:2010:NOV")
         len(contact_list)
         assert_equals(len(contact_list), 779)
         
@@ -158,7 +156,7 @@ def expand_bitly_url(url, user, apikey):
     
 def get_survey_url(mydict):
     questionnaire_base = "https://uncodum.qualtrics.com/SE/?SID=SV_0AmHD05E1lghBpa"
-    params = urllib.urlencode({"q":mydict["q"], "journal":mydict["journal"], "month":mydict["pretty_month"], "year":mydict["year"]})
+    params = urllib.urlencode({"q":mydict["q"], "journal":mydict["journal"], "month":mydict["data_month"], "year":mydict["year"]})
     url_encoded = questionnaire_base + "&" + params
     url_shortened = shorten_url_with_bitly(url_encoded, bitly_user, bitly_apikey)
     return(url_encoded, url_shortened)
@@ -198,6 +196,7 @@ def update_sent_file(sent_file, bcc_list, note):
 
     
 def send_to_contact_list(fake_or_real, contact_list, subject, email_template, q, years, contact_note_append=""):
+    ### DOESN'T HANDLE FILTERING BY YEARS YET!!!    
     log.debug("SENDING EMAIL TO GROUPS")
     for journal in set([d["journal"] for d in contact_list]):
         log.debug("JOURNAL: " + journal)
@@ -222,25 +221,25 @@ def send_to_contact_list(fake_or_real, contact_list, subject, email_template, q,
                 #log.info("******* SENT FOR REAL ***********")
                 pass
             else:
-                send_it_already(subject, email_body, ["researchremix@gmail.com", "hpiwowar@nescent.org"])
+                send_it_already(subject, email_body, ["hpiwowar@nescent.org"])
                 log.info("--- just sent it to myself--------")
-            update_sent_file(sent_filename, bcc_list, "Group:" + " ".join(years) + ":" + month + contact_note_append)
-
+            update_sent_file(sent_filename, bcc_list, "\t".join([" ".join(years), month, journal, contact_note_append]))
+    
 def send_to_email_groups(fake_or_real, months, years, sent_filename, exclude_filename, subject, email_template, q):
     random.seed(42)
     (contact_list, not_included) = contact_corresponding.do_all_filtering(isi_data_path, sent_filename, exclude_filename, months, years)
-    send_to_contact_list(fake_or_real, contact_list, subject, email_template, q, years)
+    send_to_contact_list(fake_or_real, contact_list, subject, email_template, q, years, "INITIAL")
 
-def send_to_reminder_groups(fake_or_real, months, years, reminder_string, sent_filename, exclude_filename, subject, email_template, q):
+def send_to_reminder_groups(fake_or_real, months, years, sent_filename, exclude_filename, subject, email_template, q):
     random.seed(42)
-    (contact_list, not_included) = contact_corresponding.do_reminder_filtering(isi_data_path, sent_filename, exclude_filename, months, years, reminder_string)
-    send_to_contact_list(fake_or_real, contact_list, subject, email_template, q, years, ";REMINDER")
+    (contact_list, not_included) = contact_corresponding.do_reminder_filtering(sent_filename, exclude_filename, months, years)
+    send_to_contact_list(fake_or_real, contact_list, subject, email_template, q, years, "REMINDER")
    
                 
 def send_it_already(subject, email_body, bcc_list):
-    to_list = ["hpiwowar@email.unc.edu"]
+    to_list = ["hpiwowar@live.unc.edu"]
     cc_list = []
-    from_email = "Heather Piwowar <hpiwowar@email.unc.edu>"
+    from_email = "Heather Piwowar <hpiwowar@live.unc.edu>"
     response = contact_corresponding.send_email(email_body, subject, to_list, cc_list, bcc_list, from_email)
     assert_equals(response, "success")
 
@@ -249,7 +248,7 @@ def test_get_author_and_corresponding_author_info():
     months = ["OCT"]
     years = ["2010"]
     reminder_string = "Group 2010 10"
-    (contacts_before_exclude, contacts_after_exclude, dupes1, dupes2) = contact_corresponding.do_reminder_filtering_part1(isi_data_path, sent_filename, exclude_filename, months, years, reminder_string)
+    (contacts_before_exclude, contacts_after_exclude, dupes1, dupes2) = contact_corresponding.do_reminder_filtering_part1(sent_filename, exclude_filename, months, years, reminder_string)
     assert_equals(len(contacts_after_exclude), 846)
 
     writer = csv.DictWriter(open(os.path.join(get_this_dir(), "contacted_OCT_2010.csv"), "w"), contacts_after_exclude[1].keys())
@@ -285,8 +284,27 @@ def test_dry_run():
 
     #(contact_list, not_included) = contact_corresponding.do_all_filtering(isi_data_path, sent_filename, exclude_filename, ["FEB"], ["2011"])
 
-    send_to_email_groups("FAKE", ["FEB"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_email_groups("FAKE", ["FEB"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["FEB"], ["2011"], "Group:2011:FEB", sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
 
+    #send_to_email_groups("FAKE", ["MAR"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["MAR"], ["2011"], "Group:2011:MAR", sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["APR"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["APR"], ["2011"], "Group:2011:APR", sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["MAY"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["MAY"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["JUN"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["JUN"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["JUL"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["JUL"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["AUG"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+
+    ### DOESN'T HANDLE FILTERING BY YEARS YET!!!
     pass
 
 
