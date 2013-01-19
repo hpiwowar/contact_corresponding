@@ -35,30 +35,30 @@ SCOPUS_ISSUE_FIELD_NAME = "Issue"
 SCOPUS_VOLUME_FIELD_NAME = "Volume"
 
 def get_scopus_journal(row):
-	journal = row[SCOPUS_JOURNAL_FIELD_NAME]
-	return(journal)
+    journal = row[SCOPUS_JOURNAL_FIELD_NAME]
+    return(journal)
 
 def get_scopus_year(row):
-	year = row[SCOPUS_YEAR_FIELD_NAME]
-	return(year)
+    year = row[SCOPUS_YEAR_FIELD_NAME]
+    return(year)
 
 def get_scopus_month(row):
     return("")
 
 def get_scopus_volume_issue(row):
-	volume_issue = row[SCOPUS_VOLUME_FIELD_NAME] + "_" + row[SCOPUS_ISSUE_FIELD_NAME]
-	return(volume_issue)
+    volume_issue = row[SCOPUS_VOLUME_FIELD_NAME] + "_" + row[SCOPUS_ISSUE_FIELD_NAME]
+    return(volume_issue)
 
 def get_scopus_emails(row):
-	emails = [row[SCOPUS_EMAIL_FIELD_NAME].split(" ")[-1]]
-	return(emails)
+    emails = [row[SCOPUS_EMAIL_FIELD_NAME].split(" ")[-1]]
+    return(emails)
 
 def get_scopus_fields(filename):
-	reader = csv.DictReader(open(filename, "rU"), delimiter=",")
-	tuples = [(get_scopus_journal(row), get_scopus_year(row), get_scopus_month(row), get_scopus_emails(row), get_scopus_volume_issue(row)) for row in reader]
-	mykeys = ["journal", "year", "month", "emails", "volume_issue"]
-	mydict = [dict(zip(mykeys, myvalues)) for myvalues in tuples]
-	return(mydict)
+    reader = csv.DictReader(open(filename, "rU"), delimiter=",")
+    tuples = [(get_scopus_journal(row), get_scopus_year(row), get_scopus_month(row), get_scopus_emails(row), get_scopus_volume_issue(row)) for row in reader]
+    mykeys = ["journal", "year", "month", "emails", "volume_issue"]
+    mydict = [dict(zip(mykeys, myvalues)) for myvalues in tuples]
+    return(mydict)
 
 def get_scopus_all_fields(dir):
     tuples = []
@@ -67,8 +67,8 @@ def get_scopus_all_fields(dir):
     return(tuples)    
 
 def get_isi_general(row, field):
-	article_type = row[field]
-	return(article_type)
+    article_type = row[field]
+    return(article_type)
 
 def get_isi_volume_issue(row):
     volume = row[ISI_VOLUME_FIELD_NAME]
@@ -97,20 +97,28 @@ def get_isi_pretty_month(row):
     return(month)
     
 def get_isi_emails(row):
-	emails = row[ISI_EMAIL_FIELD_NAME].split("; ")
-	# set to lower to make comparisons easy later
-	emails = [email.lower() for email in emails]
-	return(emails)
+    emails = row[ISI_EMAIL_FIELD_NAME].split("; ")
+    # set to lower to make comparisons easy later
+    emails = [email.lower() for email in emails]
+    return(emails)
 
 def get_isi_fields(filename):
-	reader = csv.DictReader(open(filename, "rU"), delimiter="\t", quoting=csv.QUOTE_NONE)
-	rows = [row for row in reader if row[ISI_JOURNAL_FIELD_NAME]]
-	tuples = [(get_isi_general(row, ISI_JOURNAL_FIELD_NAME), get_isi_general(row, ISI_YEAR_FIELD_NAME), get_isi_data_month(row), get_isi_pretty_month(row), 
-	    get_isi_emails(row), get_isi_volume_issue(row), get_isi_general(row, ISI_ARTICLE_TYPE_FIELD_NAME),
-	    get_isi_general(row, ISI_DOI_FIELD_NAME), get_isi_general(row, ISI_PAGE_FIELD_NAME), get_isi_general(row, ISI_TITLE_FIELD_NAME), get_isi_general(row, ISI_AUTHORS_FIELD_NAME)) for row in rows]
-	mykeys = ["journal", "year", "data_month", "pretty_month", "emails", "volume_issue", "type", "doi", "page", "title", "authors"]
-	mydict = [dict(zip(mykeys, myvalues)) for myvalues in tuples]
-	return(mydict)
+    print filename
+    fi = open(filename, 'rU')
+    data = fi.read()
+    fi.close()
+    fo = open(filename, 'wb')
+    fo.write(data.replace('\x00', ''))
+    fo.close()
+
+    reader = csv.DictReader(open(filename, "rU"), delimiter="\t", quoting=csv.QUOTE_NONE)
+    rows = [row for row in reader if row[ISI_JOURNAL_FIELD_NAME]]
+    tuples = [(get_isi_general(row, ISI_JOURNAL_FIELD_NAME), get_isi_general(row, ISI_YEAR_FIELD_NAME), get_isi_data_month(row), get_isi_pretty_month(row), 
+        get_isi_emails(row), get_isi_volume_issue(row), get_isi_general(row, ISI_ARTICLE_TYPE_FIELD_NAME),
+        get_isi_general(row, ISI_DOI_FIELD_NAME), get_isi_general(row, ISI_PAGE_FIELD_NAME), get_isi_general(row, ISI_TITLE_FIELD_NAME), get_isi_general(row, ISI_AUTHORS_FIELD_NAME)) for row in rows]
+    mykeys = ["journal", "year", "data_month", "pretty_month", "emails", "volume_issue", "type", "doi", "page", "title", "authors"]
+    mydict = [dict(zip(mykeys, myvalues)) for myvalues in tuples]
+    return(mydict)
 
 def get_isi_all_fields(mydir):
     tuples = []
@@ -173,17 +181,20 @@ def send_email(html_body, subject, to_addresses, cc_addresses, bcc_addresses, fr
         log.info("set smtp server")
     except:
         log.info("failed to set smtp server")
+        mailServer = None
 
     # sendmail function takes 3 arguments: sender's address, recipient's address
     # and message to send - here it is sent as one string.
+    success = False
     try:
         mailServer.sendmail(from_address, to_addresses + cc_addresses + bcc_addresses, msg.as_string())
         log.info("wrote an email:  \nFROM {0}, \nTO {1}, \nCC {2}, \nBCC {3} \n{4}".format(from_address, ",".join(to_addresses),",".join(cc_addresses), ",".join(bcc_addresses), msg.as_string()[0:200]))
+        success = True
     except:
         log.info("EMAIL NOT SENT OR RECEIVED PROPERLY:  \nFROM {0}, \nTO {1}, \nCC {2}, \nBCC {3} \n{4}".format(from_address, ",".join(to_addresses), ",".join(cc_addresses), ",".join(bcc_addresses), msg.as_string()[0:200]))
         
     mailServer.quit()  
-    return("success")
+    return(success)
 
 
 # Reading email from gmail
@@ -212,11 +223,26 @@ def get_unsubscribe_emails():
 
     status, [email_id_string] = imap_server.search(None, 'ALL')  # 'ALL'
     email_ids = email_id_string.split()
-    email_addresses = get_emails(email_ids, 'unsubscribe')
+    email_addresses = get_email_from_addresses(email_ids, 'unsubscribe')
+    email_addresses += get_emails_in_unsubscribe_subjects(email_ids, 'unsubscribe')
     return(email_addresses)
 
+def get_emails_in_unsubscribe_subjects(email_ids, mailbox):
+    imap_server = get_imap_server(mailbox)
+    
+    data = []
+    for e_id in email_ids:
+        _, response = imap_server.fetch(e_id, '(BODY[HEADER.FIELDS (SUBJECT)])')
+        subject = response[0][1]
+        #email_address = from_line[5:].strip()
+        email_address = email.utils.parseaddr(subject) 
+        print email_address[1]
+        import re
+        if re.match(r"[^@]+@[^@]+\.[^@]+", email_address[1]):
+            data.append(email_address[1])
+    return data
 
-def get_emails(email_ids, mailbox):
+def get_email_from_addresses(email_ids, mailbox):
     imap_server = get_imap_server(mailbox)
     
     data = []
@@ -253,9 +279,17 @@ def get_filtered_dict(data, predicate=lambda k, v: True):
     return(list(result))
 
 def get_already_sent_emails(already_sent_filename, reminder_string="INITIAL"):
-    already_sent_rows = open(already_sent_filename, "r").readlines()
+    already_sent_rows = open(already_sent_filename, "rU").readlines()
     already_sent_tuples = [row.split("\t") for row in already_sent_rows]
-    emails = [email for (email, sent_date, year, data_month, journal, note) in already_sent_tuples if note.strip()==reminder_string]
+    emails = []
+    for line in already_sent_tuples:
+        try:
+            (email, sent_date, year, data_month, journal, note) = line
+        except ValueError:
+            print line
+            raise ValueError
+        if note.strip()==reminder_string:
+            emails += [email]    
     return(emails)
     
 def get_one_email_per_row(rows):
@@ -327,7 +361,7 @@ def filter_unsubscribe_list(data):
     return(not_unsubscribe, unsubscribe)
 
 def get_exclude_emails(exclude_filename):
-    exclude_rows = open(exclude_filename, "r").readlines()
+    exclude_rows = open(exclude_filename, "rU").readlines()
     exclude_tuples = [row.split(",") for row in exclude_rows]
     emails = [row[-2] for row in exclude_tuples]
     return(emails)
@@ -348,9 +382,9 @@ def list_of_emails(rows):
     return([row["single_email"] for row in rows]) 
 
 def get_sent_fields(sent_filename):
-	reader = csv.DictReader(open(sent_filename, "rU"), delimiter="\t")
-	mydict = [entry for entry in reader]
-	return(mydict)
+    reader = csv.DictReader(open(sent_filename, "rU"), delimiter="\t")
+    mydict = [entry for entry in reader]
+    return(mydict)
       
 def do_reminder_filtering_part1(sent_filename, exclude_filename, months, years, reminder_string): 
     log.info("FILTERING with months=" + " ".join(months) + " and years=" + " ".join(years))

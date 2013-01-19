@@ -32,7 +32,7 @@ def get_this_dir():
     this_dir = os.path.dirname(os.path.abspath(module.__file__))
     return(this_dir)
 
-isi_data_path = os.path.join(get_this_dir(), "data", "isi", "ISI_2011-10")
+isi_data_path = os.path.join(get_this_dir(), "data", "isi", "ISI_2012-12", "2012")
 #isi_data_path = os.path.join(get_this_dir(), "data", "isi", "*")
 scopus_data_path = os.path.join(get_this_dir(), "data", "scopus", "*")
 
@@ -217,13 +217,16 @@ def send_to_contact_list(fake_or_real, contact_list, subject, email_template, q,
             log.debug("BCC list:")
             log.debug(bcc_list)
             if fake_or_real == "REAL":
-                #send_it_already(subject, email_body, bcc_list)
-                #log.info("******* SENT FOR REAL ***********")
-                pass
+                success = send_it_already(subject, email_body, bcc_list)
+                if success:
+                    log.info("******* SENT FOR REAL ***********")
+                else:
+                    log.info("******* FAILED TO SEND ***********")
             else:
-                send_it_already(subject, email_body, ["hpiwowar@nescent.org"])
+                success = send_it_already(subject, email_body, ["hpiwowar@nescent.org"])
                 log.info("--- just sent it to myself--------")
-            update_sent_file(sent_filename, bcc_list, "\t".join([" ".join(years), month, journal, contact_note_append]))
+            if success:
+                update_sent_file(sent_filename, bcc_list, "\t".join([" ".join(years), month, journal, contact_note_append]))
     
 def send_to_email_groups(fake_or_real, months, years, sent_filename, exclude_filename, subject, email_template, q):
     random.seed(42)
@@ -240,8 +243,9 @@ def send_it_already(subject, email_body, bcc_list):
     to_list = ["hpiwowar@live.unc.edu"]
     cc_list = []
     from_email = "Heather Piwowar <hpiwowar@live.unc.edu>"
-    response = contact_corresponding.send_email(email_body, subject, to_list, cc_list, bcc_list, from_email)
-    assert_equals(response, "success")
+    success = contact_corresponding.send_email(email_body, subject, to_list, cc_list, bcc_list, from_email)
+    #assert_equals(success, True)
+    return success
 
 
 def test_get_author_and_corresponding_author_info():
@@ -257,12 +261,14 @@ def test_get_author_and_corresponding_author_info():
 
 ### before sending an email, do these steps:
 ### Get updated info from ISI, if necessary.  Copy from Dropbox
-### Get most recent prize list respondents
-### Update the list to be initial/reminder with proper month and year
+### MAKE SURE CORRECT DIRECTORY to look up email addresses
+### Get most recent prize list respondents and save in no_reminder.csv
+### Update the list to be initial/reminder with proper month and year and directory
+### make sure not VPNed in anywhere!
 ### Send fake ones, make sure they are fine, then send real one
 
 ### cd ~/Documents/Projects/JDAPsurvey/contact_corresponding
-### nosy use/use_contact_corresponding.py -A runme
+### mynosy use/use_contact_corresponding.py -A runme
 
 @runme
 def test_dry_run():
@@ -303,6 +309,44 @@ def test_dry_run():
     #send_to_reminder_groups("FAKE", ["JUL"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
 
     #send_to_email_groups("FAKE", ["AUG"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["AUG"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["SEP"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["SEP"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["OCT"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["OCT"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["NOV"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["NOV"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["DEC"], ["2011"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["DEC"], ["2011"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["JAN"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["JAN"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["FEB"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["FEB"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["MAR"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["MAR"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["APR"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["APR"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["MAY"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_reminder_groups("FAKE", ["MAY"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+
+    #send_to_email_groups("FAKE", ["JUN"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_email_groups("FAKE", ["JUL"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_email_groups("FAKE", ["AUG"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+    #send_to_email_groups("FAKE", ["SEP"], ["2012"], sent_filename, exclude_filename, "Invitation to Data Sharing Policy research study", email_template_initial, 1)
+
+    #send_to_reminder_groups("FAKE", ["JUN"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+    #send_to_reminder_groups("FAKE", ["JUL"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+    #send_to_reminder_groups("FAKE", ["AUG"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
+    #send_to_reminder_groups("FAKE", ["SEP"], ["2012"], sent_filename, exclude_filename, "reminder: Invitation to Data Sharing Policy research study", email_template_followup, 2)    
 
     ### DOESN'T HANDLE FILTERING BY YEARS YET!!!
     pass
